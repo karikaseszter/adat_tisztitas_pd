@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from googletrans import Translator
 
 class EurostatTransformer:
     def __init__(self, file_path, sheet_name=None, ):
@@ -8,21 +7,13 @@ class EurostatTransformer:
         self.sheet_name = sheet_name
         self.df = None
         self.transformed_df = None
-        self.translator = Translator()  # Fordító példány létrehozása
 
     def load_data(self):
         try:
-            # Adatok betöltése Excel fájlból
             self.df = pd.read_excel(self.file_path, sheet_name=self.sheet_name)
             print(f"Adatok betöltve a(z) '{self.sheet_name}' munkalapról.")
-
-            # Unnamed oszlopok eltávolítása
             self.df = self.df.loc[:, ~self.df.columns.str.contains('^Unnamed')]
-
-            # Hiányzó értékek kezelése
             self.df.replace(':', np.nan, inplace=True)
-
-            # Oszlopnevek eltávolítása
             self.df.columns = self.df.columns.str.strip()
 
         except Exception as e:
