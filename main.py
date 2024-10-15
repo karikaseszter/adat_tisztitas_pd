@@ -1,12 +1,12 @@
 from eurostat import EurostatTransformer
 from translate import Translator
+from transformers import MarianMTModel, MarianTokenizer
 
-def translate_text(text, dest_lang='hu'):  # Example translating to Spanish (es)
-    try:
-        translated = Translator.translate(text, dest=dest_lang)
-        return translated.text
-    except Exception as e:
-        return str(e)
+# Load the tokenizer and model for English to Hungarian translation
+# https://huggingface.co/models?pipeline_tag=translation&language=hu,en&sort=trending
+
+
+
 
 def main():
     eurostat = EurostatTransformer("data/Households - level of internet access.xlsx", "Munka1")
@@ -35,6 +35,22 @@ def main():
     eurostat.translate_text("IND_TYPE (Labels)")
     eurostat.translate_text("INDIC_IS (Labels)")
     eurostat.save_transformed_data()
+
+    eurostat = EurostatTransformer("data/Internet purchases - goods or services (2020 onwards).xlsx", "Munka1")
+    eurostat.load_data()
+    eurostat.transform_data_v1(["IND_TYPE (Labels)", "INDIC_IS (Labels)"], "Évek", "%")
+    eurostat.translate_text("IND_TYPE (Labels)")
+    eurostat.translate_text("INDIC_IS (Labels)")
+    eurostat.save_transformed_data()
+
+    eurostat = EurostatTransformer("data/Privacy and protection of personal data (2020 onwards).xlsx", "Munka1")
+    eurostat.load_data()
+    eurostat.transform_data_v1(["IND_TYPE (Labels)", "INDIC_IS (Labels)"], "Évek", "%")
+    eurostat.translate_text("IND_TYPE (Labels)")
+    eurostat.translate_text("INDIC_IS (Labels)")
+    eurostat.save_transformed_data()
+
+    eurostat.save_translation_dict()
 
 if __name__== "__main__":
     main()

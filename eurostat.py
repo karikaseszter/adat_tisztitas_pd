@@ -8,6 +8,8 @@ class EurostatTransformer:
         self.sheet_name = sheet_name
         self.df = None
         self.transformed_df = None
+        self.translation_dict = {}
+        pd.set_option('future.no_silent_downcasting', True)
 
     def load_data(self):
         try:
@@ -34,14 +36,28 @@ class EurostatTransformer:
         try:
             if self.transformed_df is not None:
                 translator = Translator(to_lang=target_lang)
-                self.transformed_df[column_name] = self.transformed_df[column_name].apply(lambda x: translator.translate(x) if pd.notnull(x) else x)
 
+                def translate_value(value):
+                    if pd.notnull(value):
+                        # Ellenőrizzük, hogy van-e már fordítás a szótárban
+                        if value in self.translation_dict:
+                            return self.translation_dict[value]
+                        else:
+                            # Fordítás végrehajtása
+                            translated_value = translator.translate(value)
+                            # A fordítás hozzáadása a szótárhoz
+                            self.translation_dict[value] = translated_value
+                            return translated_value
+                    return value
+
+                self.transformed_df[column_name] = self.transformed_df[column_name].apply(translate_value)
+
+                # Fixált fordítások
                 self.transformed_df[column_name].replace({
                     "France": "Franciaország",
                     "Ireland": "Írország",
                     "Portugal": "Portugália",
                     "European Union (27 countries)": "Európai Unió (27 ország)"
-
                 }, inplace=True)
 
                 print(f"A(z) '{column_name}' oszlop lefordítva {target_lang} nyelvre.")
@@ -57,3 +73,14 @@ class EurostatTransformer:
             print(f"Az átalakított adatok mentése megtörtént: {output_path}")
         else:
             print("Először át kell alakítani az adatokat.")
+
+
+    def save_translation_dict(self, file_name='translations.txt'):
+        """A fordítási szótár kiírása egy txt fájlba."""
+        try:
+            with open(file_name, 'w', encoding='utf-8') as f:
+                for key, value in self.translation_dict.items():
+                    f.write(f"{key}: {value}\n")
+            print(f"A fordítási szótár kiírva a '{file_name}' fájlba.")
+        except Exception as e:
+            print(f"Hiba történt a fájlba írás során: {e}")
