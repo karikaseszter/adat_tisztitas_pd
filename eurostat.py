@@ -2,13 +2,15 @@ import numpy as np
 import pandas as pd
 from translate import Translator
 
+
 class EurostatTransformer:
-    def __init__(self, file_path, sheet_name=None):
+    def __init__(self, file_path, sheet_name=None, translation_dict = {}):
         self.file_path = file_path
         self.sheet_name = sheet_name
         self.df = None
         self.transformed_df = None
-        self.translation_dict = {}
+        self.translation_dict = translation_dict
+        self.load_translation_dict()
         pd.set_option('future.no_silent_downcasting', True)
 
     def load_data(self):
@@ -25,8 +27,8 @@ class EurostatTransformer:
     def transform_data_v1(self, idvar, varname, valuename):
         if self.df is not None:
             self.transformed_df = self.df.melt(id_vars=idvar,
-                                                var_name=varname,
-                                                value_name=valuename)
+                                               var_name=varname,
+                                               value_name=valuename)
             self.transformed_df = self.transformed_df.sort_values(by=idvar)
             print("Az adatok átalakítva.")
         else:
@@ -39,20 +41,20 @@ class EurostatTransformer:
 
                 def translate_value(value):
                     if pd.notnull(value):
-                        # Ellenőrizzük, hogy van-e már fordítás a szótárban
                         if value in self.translation_dict:
                             return self.translation_dict[value]
-                        else:
-                            # Fordítás végrehajtása
+                        try:
                             translated_value = translator.translate(value)
-                            # A fordítás hozzáadása a szótárhoz
                             self.translation_dict[value] = translated_value
                             return translated_value
+                        except Exception as e:
+                            print(f"Hiba történt a fordításnál: {e}")
+                            self.translation_dict[value] = "HIBA"  # Hiba esetén is kerüljön be a szótárba
+                            return value
                     return value
 
                 self.transformed_df[column_name] = self.transformed_df[column_name].apply(translate_value)
-
-                # Fixált fordítások
+                # Manuális helyettesítések
                 self.transformed_df[column_name].replace({
                     "France": "Franciaország",
                     "Ireland": "Írország",
@@ -74,9 +76,7 @@ class EurostatTransformer:
         else:
             print("Először át kell alakítani az adatokat.")
 
-
     def save_translation_dict(self, file_name='translations.txt'):
-        """A fordítási szótár kiírása egy txt fájlba."""
         try:
             with open(file_name, 'w', encoding='utf-8') as f:
                 for key, value in self.translation_dict.items():
@@ -84,3 +84,16 @@ class EurostatTransformer:
             print(f"A fordítási szótár kiírva a '{file_name}' fájlba.")
         except Exception as e:
             print(f"Hiba történt a fájlba írás során: {e}")
+
+    def load_translation_dict(self, file_name='translations.txt'):
+        try:
+            with open(file_name, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if ': ' in line:
+                        key, value = line.strip().split(': ', 1)
+                        self.translation_dict[key] = value
+            print(f"A fordítási szótár betöltve a '{file_name}' fájlból.")
+        except FileNotFoundError:
+            print(f"A '{file_name}' fájl nem található, új szótár létrehozása folyamatban...")
+        except Exception as e:
+            print(f"Hiba történt a fájl betöltése során: {e}")
